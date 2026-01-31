@@ -1,12 +1,9 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]";
+import { authenticateRequest } from "../auth-helper";
 import { prismaClient } from "@/lib/prisma";
 
 const promptTemplatesHandler = async (request, response) => {
-  const session = await getServerSession(request, response, authOptions);
-  const user = await prismaClient.user.findUnique({
-    where: { email: session.user.email },
-  });
+  const user = await authenticateRequest(request, response);
+  if (!user) return; // Response already handled by authenticateRequest
 
   if (request.method === "GET") {
     const data = await prismaClient.promptTemplate.findMany({
@@ -27,14 +24,22 @@ const promptTemplatesHandler = async (request, response) => {
   }
 
   if (request.method === "POST") {
+    const { name, prompt, inputs } = request.body;
+    
     const promptTemplate = await prismaClient.promptTemplate.create({
       data: {
-        userId: user.id,
-        ...request.body,
+        name,
+        prompt,
+        inputs: inputs || "[]",
+        user: {
+          connect: {
+            id: user.id
+          }
+        },
       },
     });
 
-    return response.status(200).json({ sucess: true, data: promptTemplate });
+    return response.status(200).json({ success: true, data: promptTemplate });
   }
 };
 

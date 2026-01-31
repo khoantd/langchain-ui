@@ -30,7 +30,7 @@ import PageHeader from "@/components/page-header";
 import { useSidebar } from "@/lib/sidebar";
 import {
   createPromptTemplate,
-  getPrompTemplates,
+  getPromptTemplates,
   getPromptVariables,
   removePromptTemplateById,
 } from "@/lib/api";
@@ -43,11 +43,11 @@ export default function PromptTemplatesClientPage() {
   const [promptTemplates, setPromptTemplates] = useState([]);
 
   const { loading: isLoading } = useAsync(async () => {
-    const { data } = await getPrompTemplates();
+    const { data } = await getPromptTemplates();
     setPromptTemplates(data);
 
     return data;
-  }, [getPrompTemplates, setPromptTemplates]);
+  }, [getPromptTemplates, setPromptTemplates]);
   const [showForm, setShowForm] = useState(
     !isLoading && promptTemplates.length === 0
   );

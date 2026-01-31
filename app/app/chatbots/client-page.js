@@ -31,7 +31,7 @@ import {
   createChatbot,
   getChatbots,
   getDatasources,
-  getPrompTemplates,
+  getPromptTemplates,
   removeChatbotById,
 } from "@/lib/api";
 
@@ -52,23 +52,32 @@ export default function ChatbotsClientPage() {
     register,
   } = useForm();
 
-  const { loading: isLoading } = useAsync(async () => {
-    const [
-      { data: chatbots },
-      { data: promptTemplates },
-      { data: datasources },
-    ] = await Promise.all([
-      getChatbots(),
-      getPrompTemplates(),
-      getDatasources(),
-    ]);
+  const { loading: isLoading, error } = useAsync(async () => {
+    try {
+      const [
+        { data: chatbots },
+        { data: promptTemplates },
+        { data: datasources },
+      ] = await Promise.all([
+        getChatbots(),
+        getPromptTemplates(),
+        getDatasources(),
+      ]);
 
-    setChatbots(chatbots);
-    setPromptTemplates(promptTemplates);
-    setDatasources(datasources);
+      setChatbots(chatbots);
+      setPromptTemplates(promptTemplates);
+      setDatasources(datasources);
 
-    return;
-  }, [getChatbots, getPrompTemplates, setChatbots]);
+      return { chatbots, promptTemplates, datasources };
+    } catch (err) {
+      console.error('Error loading data:', err);
+      throw err;
+    }
+  }, [getChatbots, getPromptTemplates, setChatbots]);
+
+  if (error) {
+    console.error('useAsync error:', error);
+  }
 
   const handleRemoveChatbot = useCallback(async (chatbotId) => {
     await removeChatbotById(chatbotId);

@@ -32,8 +32,8 @@ export default function Message({ agent, message, isLastMessage }) {
       <HStack spacing={6} maxWidth="4xl" marginX="auto" alignItems="center">
         <Avatar
           borderRadius="md"
-          src={agent && "/chatbot.png"}
-          name={!agent && "User"}
+          src={agent ? "/chatbot.png" : undefined}
+          name={!agent ? "User" : undefined}
           size="xs"
           alignSelf="flex-start"
         />

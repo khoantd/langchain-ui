@@ -1,12 +1,12 @@
 import React, { useCallback, useState } from "react";
 import PropTypes from "prop-types";
 import { Stack } from "@chakra-ui/react";
-import { fetchEventSource } from "@microsoft/fetch-event-source";
+
 import { createChatbotMessage } from "@/lib/api";
 import ChatInput from "./input";
 import ChatOuput from "./output";
 
-const API_URL = process.env.NEXT_PUBLIC_LANGCHAIN_UI_API_URL;
+// Use relative URLs since we're on the same domain
 
 export default function Chat({ id, ...properties }) {
   const [messages, setMessages] = useState([]);
@@ -16,49 +16,48 @@ export default function Chat({ id, ...properties }) {
 
   const onSubmit = useCallback(
     async (values) => {
-      let message = "";
-
       setIsSendingMessage(true);
       setMessages((previousMessages) => [
         ...previousMessages,
-        { data: { response: values } },
+        { agent: "user", data: { response: values } },
       ]);
 
-      createChatbotMessage(id, {
-        message: values,
-        agent: "user",
-      });
+      try {
+        // Call our LiteLLM completion endpoint
+        const response = await fetch(`/api/chat/${id}/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: values,
+            chatbotId: id,
+          }),
+        });
 
-      await fetchEventSource(`${API_URL}chatbots/${id}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: values,
-        }),
-        async onmessage(event) {
-          if (event.data !== "CLOSE") {
-            message += event.data === "" ? `${event.data} \n` : event.data;
-            setNewMessage(message);
-          }
+        const data = await response.json();
 
-          if (event.data === "CLOSE") {
-            setMessages((previousMessages) => [
-              ...previousMessages,
-              { agent: "ai", data: { response: message } },
-            ]);
+        if (data.success) {
+          setMessages((previousMessages) => [
+            ...previousMessages,
+            { agent: "ai", data: { response: data.response } },
+          ]);
+        } else {
+          setMessages((previousMessages) => [
+            ...previousMessages,
+            { agent: "ai", data: { response: `Error: ${data.error}` } },
+          ]);
+        }
+      } catch (error) {
+        console.error('Chat completion error:', error);
+        setMessages((previousMessages) => [
+          ...previousMessages,
+          { agent: "ai", data: { response: "Sorry, I encountered an error. Please try again." } },
+        ]);
+      }
 
-            createChatbotMessage(id, {
-              message,
-              agent: "ai",
-            });
-
-            setNewMessage();
-          }
-        },
-      });
       setIsSendingMessage();
+      setNewMessage();
     },
     [id]
   );

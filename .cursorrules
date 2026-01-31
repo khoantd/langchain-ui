@@ -1,0 +1,137 @@
+# LangChain UI Cursor Rules
+
+## Project Overview
+This is a Next.js 13 no-code chatbot toolkit built with LangChain. It allows users to create custom ChatGPT-like chatbots without coding through a web interface.
+
+## Tech Stack
+- **Framework**: Next.js 13 with app directory structure
+- **UI Library**: Chakra UI component library
+- **Database**: PostgreSQL with Prisma ORM
+- **Authentication**: NextAuth.js (GitHub OAuth)
+- **Styling**: Emotion (Chakra UI's styling engine)
+- **State Management**: React hooks and client-side state
+
+## Code Patterns & Conventions
+
+### File Structure
+```
+app/
+├── layout.js                 # Root layout
+├── app/
+│   ├── layout.js            # Authenticated app layout
+│   ├── container.js         # App container with sidebar
+│   ├── sidebar.js           # Navigation sidebar
+│   ├── page.js              # Dashboard/home
+│   ├── chatbots/            # Chatbot management
+│   ├── datasources/         # Data source management
+│   └── prompt-templates/   # Prompt template management
+components/                  # Reusable UI components
+lib/                        # Utility functions and configurations
+pages/api/                  # Next.js API routes
+prisma/                     # Database schema and migrations
+```
+
+### Component Patterns
+- Use `"use client";` directive for client-side components
+- Server components for static/data-fetching pages
+- Client components for interactivity and state management
+- Import React explicitly in client components
+
+### Styling Conventions
+- Use Chakra UI components exclusively (Box, Stack, Button, etc.)
+- Leverage Chakra's responsive props (sx, display, etc.)
+- Use `useColorModeValue` for theme-aware styling
+- Maintain consistent spacing using Chakra's spacing scale (1, 2, 3, 4, 6, 8)
+
+### State Management
+- Use `react-hook-form` for form handling
+- Use `react-use` for async operations and utilities
+- Local state with `useState` for component-specific data
+- Custom hooks in `lib/` for reusable logic
+
+### API Integration
+- API functions in `lib/api.js` (or separate files)
+- Use `ky` for HTTP requests
+- Handle loading states and error boundaries
+- Follow RESTful conventions for API endpoints
+
+### Database Patterns
+- Prisma schema in `prisma/schema.prisma`
+- Use Prisma client for database operations
+- Cascade deletes for related entities
+- Proper foreign key relationships
+
+### Authentication
+- NextAuth.js configuration in `pages/api/auth/[...nextauth].js`
+- Server-side session checking with `getServerSession`
+- Redirect unauthenticated users to root
+- User data accessible through session
+
+## Development Guidelines
+
+### When Adding Features
+1. Follow the existing page structure: `page.js`, `loading.js`, `client-page.js`
+2. Use consistent naming conventions (camelCase for variables, PascalCase for components)
+3. Add appropriate loading states and error handling
+4. Maintain responsive design principles
+5. Use TypeScript-style JSDoc comments for better intellisense
+
+### UI/UX Consistency
+- Use consistent button sizes (`sm`, `md`) and color schemes
+- Maintain the sidebar navigation pattern
+- Use `PageHeader` component for page titles and actions
+- Implement dark/light mode support
+- Use consistent spacing (4, 6, 8) throughout
+
+### Performance Considerations
+- Use `useCallback` for event handlers to prevent unnecessary re-renders
+- Implement proper loading states with spinners
+- Use `Promise.all()` for parallel API calls where appropriate
+- Leverage Next.js 13's streaming and server components
+
+## Testing & Quality
+- Run `npm run lint` for code quality checks
+- Test authentication flows
+- Verify database schema changes with Prisma migrations
+- Test API endpoints independently
+
+## Common Imports
+```javascript
+// Core dependencies
+import React from "react";
+import { useRouter } from "next/navigation";
+import { getServerSession } from "next-auth/next";
+
+// Chakra UI
+import {
+  Box, Stack, Button, Input, Select,
+  Text, HStack, Center, Container,
+  Spinner, Icon, IconButton, useColorModeValue
+} from "@chakra-ui/react";
+
+// Icons from react-icons/tb
+import { TbPlus, TbTrashX, TbMessage, TbDatabase, TbPrompt } from "react-icons/tb";
+
+// Hooks and utilities
+import { useForm } from "react-hook-form";
+import { useAsync } from "react-use";
+import { useColorMode } from "@chakra-ui/react";
+```
+
+## API Examples
+```javascript
+// lib/api.js patterns
+export async function getChatbots() {
+  // Fetch chatbots with authentication
+}
+
+export async function createChatbot(data) {
+  // Create new chatbot with validation
+}
+
+export async function removeChatbotById(id) {
+  // Delete chatbot with cascade handling
+}
+```
+
+Remember: This is a no-code tool focused on user experience and simplicity. Keep the interface intuitive and maintain consistency with existing patterns.

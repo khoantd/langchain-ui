@@ -10,10 +10,12 @@ import {
   Link,
   Stack,
   Text,
+  Badge,
   useColorModeValue,
 } from "@chakra-ui/react";
-import { TbBrandGithub, TbLink } from "react-icons/tb";
+import { TbBrandGithub, TbLink, TbDoorEnter } from "react-icons/tb";
 import { signIn } from "next-auth/react";
+import { useEffect, useState } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,6 +24,11 @@ export default function LandingPage() {
   const buttonColorScheme = useColorModeValue("blackAlpha", "whiteAlpha");
   const buttonBackgroundColor = useColorModeValue("black", "white");
   const fontColor = useColorModeValue("white", "white");
+  const [isAuthEnabled, setIsAuthEnabled] = useState(true);
+
+  useEffect(() => {
+    setIsAuthEnabled(process.env.NEXT_PUBLIC_GITHUB_AUTH_ENABLED !== "false");
+  }, []);
 
   return (
     <Flex
@@ -42,6 +49,11 @@ export default function LandingPage() {
             </Text>
           </Text>
           <HStack spacing={4}>
+            {!isAuthEnabled && (
+              <Badge colorScheme="yellow" fontSize="xs">
+                Auth Disabled
+              </Badge>
+            )}
             <Link
               href="https://github.com/homanp/langchain-ui"
               color={fontColor}
@@ -83,15 +95,27 @@ export default function LandingPage() {
             </Text>
           </Heading>
           <Stack>
-            <Button
-              leftIcon={<Icon as={TbBrandGithub} />}
-              colorScheme={buttonColorScheme}
-              backgroundColor={buttonBackgroundColor}
-              size="sm"
-              onClick={() => signIn("github", { callbackUrl: "/app" })}
-            >
-              Sign in with Github
-            </Button>
+            {isAuthEnabled ? (
+              <Button
+                leftIcon={<Icon as={TbBrandGithub} />}
+                colorScheme={buttonColorScheme}
+                backgroundColor={buttonBackgroundColor}
+                size="sm"
+                onClick={() => signIn("github", { callbackUrl: "/app" })}
+              >
+                Sign in with Github
+              </Button>
+            ) : (
+              <Button
+                leftIcon={<Icon as={TbDoorEnter} />}
+                colorScheme={buttonColorScheme}
+                backgroundColor={buttonBackgroundColor}
+                size="sm"
+                onClick={() => window.location.href = "/app"}
+              >
+                Enter App
+              </Button>
+            )}
             <HStack spacing={1} alignItems="center" justifyContent="center">
               <Icon as={TbLink} fontSize="xs" color="gray.500" />
               <Link

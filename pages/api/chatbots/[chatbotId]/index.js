@@ -1,16 +1,11 @@
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "../../auth/[...nextauth]";
+import { authenticateRequest } from "@/pages/api/auth-helper";
 import { prismaClient } from "@/lib/prisma";
 
 const chatbotHandler = async (request, response) => {
-  const session = await getServerSession(request, response, authOptions);
+  const user = await authenticateRequest(request, response);
+  if (!user) return; // Response already handled by authenticateRequest
+  
   const { chatbotId } = request.query;
-
-  if (!session) {
-    return response
-      .status(403)
-      .json({ success: false, error: "Not authenticated" });
-  }
 
   if (request.method === "DELETE") {
     const data = await prismaClient.chatbot.delete({

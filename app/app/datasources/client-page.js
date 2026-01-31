@@ -37,6 +37,35 @@ import { DATASOURCE_TYPES } from "@/lib/datasources";
 import { uploadFile } from "@/lib/upload-file.js";
 import { getUploadUrl } from "@/lib/upload-url.js";
 
+// Client-side function to call ingest API
+const ingestData = async ({ url, type, file }) => {
+  let csvContent;
+  
+  if (file) {
+    // Read file as text and send as part of JSON payload
+    csvContent = await file.text();
+  }
+  
+  const response = await fetch('/api/datasources/ingest', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ 
+      url, 
+      type, 
+      csvContent 
+    }),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || 'Failed to ingest data');
+  }
+  
+  return response.json();
+};
+
 export default function DatasourcesClientPage() {
   const buttonColorScheme = useColorModeValue("blackAlpha", "whiteAlpha");
   const buttonBackgroundColor = useColorModeValue("black", "white");
@@ -44,12 +73,21 @@ export default function DatasourcesClientPage() {
   const menu = useSidebar();
   const [datasources, setDatasources] = useState([]);
 
-  const { loading: isLoading } = useAsync(async () => {
-    const { data } = await getDatasources();
-    setDatasources(data);
+  const loadDatasources = useCallback(async () => {
+    try {
+      const response = await getDatasources();
+      if (response.success) {
+        setDatasources(response.data);
+      }
+    } catch (error) {
+      console.error('Error loading datasources:', error);
+    }
+  }, [setDatasources]);
 
-    return data;
-  }, [getDatasources, setDatasources]);
+  const { loading: isLoading } = useAsync(async () => {
+    await loadDatasources();
+    return datasources;
+  }, [loadDatasources]);
   const [showForm, setShowForm] = useState(
     !isLoading && datasources.length === 0
   );
@@ -68,23 +106,65 @@ export default function DatasourcesClientPage() {
 
   const onSubmit = useCallback(
     async ({ name, type }) => {
-      const fileType = files[0].type;
-      const uploadUrl = await getUploadUrl({ type: fileType });
-      const s3Url = `${uploadUrl.url}/${uploadUrl.fields.key}`;
+      try {
+        const file = files[0];
+        
+        // Client-side validation (50MB)
+        const MAX_SIZE = 50 * 1024 * 1024;
+        if (file.size > MAX_SIZE) {
+          throw new Error('File size exceeds 50MB limit. Please choose a smaller file.');
+        }
 
-      await uploadFile(files[0], uploadUrl);
+        // Step 1: Get upload URL and upload file (existing flow)
+        const fileType = file.type;
+        const uploadUrl = await getUploadUrl({ type: fileType });
+        const fileUrl = `${uploadUrl.url}/${uploadUrl.fields.key}`;
 
-      const { data: datasource } = await createDatasource({
-        url: s3Url,
-        name: name,
-        type: type,
-      });
+        await uploadFile(file, uploadUrl);
 
-      setDatasources((prev) => [datasource, ...prev]);
-      setShowForm();
-      reset();
+        // Step 2: Create datasource metadata (existing flow)
+        const { data: datasource } = await createDatasource({
+          url: fileUrl,
+          name: name,
+          type: type,
+        });
+
+        console.log('Created datasource:', datasource);
+
+        // Step 3: Trigger ingest (modified to store in database)
+        const ingestResult = await ingestData({
+          url: fileUrl,
+          type: type,
+          file: file
+        });
+
+        console.log('Ingest result:', ingestResult);
+
+        // Refresh datasource list
+        await loadDatasources();
+        setShowForm(false);
+        reset();
+        
+      } catch (error) {
+        console.error('Error creating datasource:', error);
+        
+        let errorMessage = error.message;
+        
+        // Handle specific error cases
+        if (error.message.includes('File too large')) {
+          errorMessage = 'File size exceeds 50MB limit. Please choose a smaller file.';
+        } else if (error.message.includes('CSV')) {
+          errorMessage = 'Invalid CSV file. Please check your file format and try again.';
+        } else if (error.message.includes('Failed to fetch')) {
+          errorMessage = 'Failed to process uploaded file. Please try uploading again.';
+        } else {
+          errorMessage = `Error: ${error.message}\n\nPlease ensure your CSV file is properly formatted and under 50MB.`;
+        }
+        
+        alert(errorMessage);
+      }
     },
-    [files, reset, setDatasources]
+    [files, reset, loadDatasources]
   );
 
   const handleRemoveDatasource = useCallback(async (datasourceId) => {

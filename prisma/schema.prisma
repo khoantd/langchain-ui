@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"  // Change to "mysql", "sqlite", etc.
   url      = env("DATABASE_URL")
 }
 
@@ -29,12 +29,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -65,7 +65,7 @@ model PromptTemplate {
   prompt    String
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
-  inputs    Json
+  inputs    String   // Using String instead of Json for SQLite compatibility
   name      String
   Chatbot   Chatbot[]
 }
@@ -76,10 +76,15 @@ model Datasource {
   updatedAt DateTime  @updatedAt
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
-  url       String
+  url       String?   // Made optional for backward compatibility
   name      String
   type      String
+  content   String?   // Store CSV content directly
+  size      Int?      // File size in bytes for validation
   Chatbot   Chatbot[]
+  
+  @@index([userId]) // For user-specific queries
+  @@index([name])   // For datasource lookup
 }
 
 model Chatbot {
@@ -102,6 +107,6 @@ model ChatbotMessage {
   updatedAt DateTime @updatedAt
   chatbot   Chatbot? @relation(fields: [chatbotId], references: [id], onDelete: Cascade)
   chatbotId Int?
-  message   String   @db.VarChar()
+  message   String
   agent     String
 }

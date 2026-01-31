@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth/next";
 import { redirect } from "next/navigation";
 import { authOptions } from "pages/api/auth/[...nextauth]";
 import AppContainer from "./container";
+import { isAuthEnabled } from "@/lib/auth";
 
 export const metadata = {
   title: "Home",
@@ -9,10 +10,13 @@ export const metadata = {
 };
 
 export default async function AppLayout({ children }) {
-  const session = await getServerSession(authOptions);
+  // Skip authentication check when auth is disabled
+  if (isAuthEnabled()) {
+    const session = await getServerSession(authOptions);
 
-  if (!session) {
-    redirect("/");
+    if (!session) {
+      redirect("/");
+    }
   }
 
   return <AppContainer>{children}</AppContainer>;
